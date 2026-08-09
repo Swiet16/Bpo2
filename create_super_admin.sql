@@ -1,16 +1,17 @@
 -- ============================================================================
--- MYNE7X BPO — Create Super Admin Account (SMALL SQL)
+-- MYNE7X BPO — Create Super Admin Account (FIXED)
 -- ============================================================================
 -- Run this in Supabase SQL Editor to create the CEO login account.
 --
 -- Email:    myne7x@gmail.com
 -- Password: 123@@Winn
 --
--- After running this, you can log in at your app's /login page.
+-- ⚠️ PREREQUISITE: You MUST run supabase_schema.sql FIRST to create the tables.
+--    If you haven't run it yet, run it now, then come back to this file.
 -- ============================================================================
 
 -- Step 1: Fix the protect_super_admin trigger to ALLOW the protected email
--- (The original trigger blocked ALL super_admin inserts, which was a bug)
+-- (This allows super_admin role ONLY for myne7x@gmail.com, blocks everyone else)
 create or replace function public.prevent_super_admin_modification()
 returns trigger as $$
 declare
@@ -20,7 +21,6 @@ declare
 begin
   -- Allow Super Admin to do anything
   if public.is_super_admin() then
-    -- But prevent role downgrade of the protected super admin by themselves
     if TG_OP = 'UPDATE' and OLD.email = protected_email and NEW.role != 'super_admin' then
       raise exception 'Access Denied — The protected Super Admin role cannot be downgraded.';
     end if;
@@ -33,7 +33,6 @@ begin
     if lower(target_email) = lower(protected_email) then
       raise exception 'Access Denied — This action requires Super Admin authorization.';
     end if;
-    -- Prevent role escalation to super_admin for non-protected accounts
     if TG_OP = 'UPDATE' and NEW.role = 'super_admin' and target_old_role != 'super_admin' then
       raise exception 'Access Denied — Only the protected Super Admin can grant Super Admin role.';
     end if;
@@ -48,62 +47,88 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Step 2: Create the auth user with bcrypt-hashed password
-insert into auth.users (
-  id,
-  email,
-  encrypted_password,
-  email_confirmed_at,
-  created_at,
-  updated_at,
-  aud,
-  role,
-  raw_app_meta_data,
-  raw_user_meta_data,
-  confirmation_token,
-  recovery_token,
-  email_change_token_new,
-  email_change
-) values (
-  gen_random_uuid(),
-  'myne7x@gmail.com',
-  crypt('123@@Winn', gen_salt('bf')),
-  now(),
-  now(),
-  now(),
-  'authenticated',
-  'authenticated',
-  '{"provider":"email","providers":["email"]}'::jsonb,
-  '{}'::jsonb,
-  '',
-  '',
-  '',
-  ''
-)
-on conflict (email) do update
-  set encrypted_password = excluded.encrypted_password,
+-- Step 2: Create or update the auth user + profile using a DO block
+-- (This avoids ON CONFLICT issues and handles both new and existing users)
+do $$
+declare
+  v_user_id uuid;
+  v_password text := '123@@Winn';
+  v_email text := 'myne7x@gmail.com';
+begin
+  -- Check if the auth user already exists
+  select id into v_user_id from auth.users where lower(email) = lower(v_email);
+
+  if v_user_id is null then
+    -- User doesn't exist — create new one
+    insert into auth.users (
+      id,
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      created_at,
+      updated_at,
+      aud,
+      role,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      confirmation_token,
+      recovery_token,
+      email_change_token_new,
+      email_change,
+      instance_id
+    ) values (
+      gen_random_uuid(),
+      v_email,
+      crypt(v_password, gen_salt('bf')),
+      now(),
+      now(),
+      now(),
+      'authenticated',
+      'authenticated',
+      '{"provider":"email","providers":["email"]}'::jsonb,
+      '{}'::jsonb,
+      '',
+      '',
+      '',
+      '',
+      '00000000-0000-0000-0000-000000000000'
+    )
+    returning id into v_user_id;
+    
+    raise notice '✅ Created new auth user: % (ID: %)', v_email, v_user_id;
+  else
+    -- User exists — update password
+    update auth.users set
+      encrypted_password = crypt(v_password, gen_salt('bf')),
       email_confirmed_at = now(),
       updated_at = now(),
       aud = 'authenticated',
-      role = 'authenticated';
+      role = 'authenticated'
+    where id = v_user_id;
+    
+    raise notice '✅ Updated existing auth user password: % (ID: %)', v_email, v_user_id;
+  end if;
 
--- Step 3: Create/update the profile with super_admin role
-insert into public.profiles (id, email, full_name, role, employment_status, must_change_password)
-select id, email, 'MYNE7X CEO', 'super_admin', 'active', false
-from auth.users
-where email = 'myne7x@gmail.com'
-on conflict (email) do update
-  set role = 'super_admin',
-      full_name = 'MYNE7X CEO',
-      employment_status = 'active',
-      must_change_password = false;
+  -- Now create/update the profile (use ON CONFLICT on id — primary key always exists)
+  insert into public.profiles (id, email, full_name, role, employment_status, must_change_password)
+  values (v_user_id, v_email, 'MYNE7X CEO', 'super_admin', 'active', false)
+  on conflict (id) do update
+    set role = 'super_admin',
+        full_name = 'MYNE7X CEO',
+        employment_status = 'active',
+        must_change_password = false,
+        updated_at = now();
 
--- Step 4: Verify the account was created
-select '✅ Super Admin account ready!' as status,
-       email,
-       role,
-       employment_status,
-       'You can now log in at /login' as next_step
+  raise notice '✅ Super Admin profile ready: %', v_email;
+end $$;
+
+-- Step 3: Verify the account was created
+select
+  '✅ Super Admin account ready!' as status,
+  email,
+  role,
+  employment_status,
+  'Login at /login with email myne7x@gmail.com' as next_step
 from public.profiles
 where email = 'myne7x@gmail.com';
 
