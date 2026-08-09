@@ -1,7 +1,7 @@
 import { Outlet, Link, NavLink } from 'react-router-dom'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, LogIn, Phone, Mail } from 'lucide-react'
+import { Menu, X, LogIn, Phone, Mail, UserPlus } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 
 const navItems = [
@@ -46,6 +46,9 @@ export function PublicLayout() {
             </nav>
 
             <div className="flex items-center gap-2">
+              <Link to="/signup" className="btn-secondary text-xs sm:text-sm hidden sm:inline-flex">
+                <UserPlus className="h-4 w-4" /> Sign Up
+              </Link>
               <Link to="/login" className="btn-primary text-xs sm:text-sm">
                 <LogIn className="h-4 w-4" /> Login
               </Link>
@@ -100,7 +103,10 @@ export function PublicLayout() {
                     {item.label}
                   </NavLink>
                 ))}
-                <Link to="/login" onClick={() => setMobileOpen(false)} className="btn-primary w-full mt-3">
+                <Link to="/signup" onClick={() => setMobileOpen(false)} className="btn-secondary w-full mt-3">
+                  <UserPlus className="h-4 w-4" /> Sign Up
+                </Link>
+                <Link to="/login" onClick={() => setMobileOpen(false)} className="btn-primary w-full mt-2">
                   <LogIn className="h-4 w-4" /> Login
                 </Link>
               </nav>

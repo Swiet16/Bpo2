@@ -4,6 +4,7 @@ import { ROLES, type UserRole } from '@/types'
 import { hasPermission, ACCESS_DENIED_MESSAGE } from '@/lib/permissions'
 
 import { LoginPage } from '@/pages/auth/LoginPage'
+import { SignupPage } from '@/pages/auth/SignupPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ForceChangePasswordPage } from '@/pages/auth/ForceChangePasswordPage'
 import { AccessDeniedPage } from '@/pages/error/AccessDeniedPage'
@@ -160,6 +161,7 @@ export default function App() {
 
         {/* Auth */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route
           path="/force-change-password"

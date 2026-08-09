@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, Shield, ArrowRight } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, Shield, ArrowRight, UserPlus, CheckCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { Logo } from '@/components/Logo'
@@ -9,6 +9,7 @@ import { SUPER_ADMIN_EMAIL } from '@/lib/supabase'
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { signIn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -16,6 +17,14 @@ export function LoginPage() {
   const [remember, setRemember] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+
+  useEffect(() => {
+    const state = location.state as { msg?: string } | null
+    if (state?.msg) {
+      setSuccessMsg(state.msg)
+    }
+  }, [location.state])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -103,6 +112,13 @@ export function LoginPage() {
               </motion.div>
             )}
 
+            {successMsg && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-4 flex items-start gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm">
+                <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{successMsg}</span>
+              </motion.div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="input-label">Email or Username</label>
@@ -144,8 +160,8 @@ export function LoginPage() {
           </div>
           <p className="mt-6 text-center text-xs text-slate-500">
             Don't have an account?{' '}
-            <Link to="/careers" className="text-brand-violet hover:text-brand-purple inline-flex items-center gap-1">
-              Join our team <ArrowRight className="h-3 w-3" />
+            <Link to="/signup" className="text-brand-violet hover:text-brand-purple inline-flex items-center gap-1">
+              <UserPlus className="h-3 w-3" /> Create account
             </Link>
           </p>
         </motion.div>
