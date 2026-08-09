@@ -136,10 +136,7 @@ export function LoginPage() {
             </form>
 
             <div className="mt-6 pt-6 border-t border-white/5">
-              <p className="text-xs text-slate-500 text-center">
-                Protected CEO Account: <span className="text-slate-400 font-mono">{SUPER_ADMIN_EMAIL}</span>
-              </p>
-              <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
                 <Shield className="h-3 w-3" />
                 <span>Secured by Supabase Authentication · Role-based access control enforced</span>
               </div>

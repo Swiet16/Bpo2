@@ -690,9 +690,9 @@ begin
     end if;
   end if;
 
-  -- For INSERT: prevent creating a new super_admin
-  if TG_OP = 'INSERT' and NEW.role = 'super_admin' then
-    raise exception 'Access Denied — Super Admin accounts can only be created through the auth.users signup flow with the protected email.';
+  -- For INSERT: prevent creating a new super_admin UNLESS it's the protected email
+  if TG_OP = 'INSERT' and NEW.role = 'super_admin' and lower(NEW.email) != lower(protected_email) then
+    raise exception 'Access Denied — Super Admin role can only be assigned to the protected email.';
   end if;
 
   return coalesce(NEW, OLD);
