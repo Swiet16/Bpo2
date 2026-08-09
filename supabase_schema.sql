@@ -12,9 +12,13 @@
 -- 5. All Storage buckets must be PRIVATE (not public)
 -- ============================================================================
 
--- Set the protected Super Admin email at the database level
--- This is used by security triggers below
-alter database postgres set app.super_admin_email = 'myne7x@gmail.com';
+-- ⚠️ NOTE: Supabase hosted environment does not allow `ALTER DATABASE` commands.
+-- The protected Super Admin email is hardcoded in the security functions below.
+-- To change it, update the `protected_email` variable in those functions
+-- AND update VITE_SUPER_ADMIN_EMAIL in your .env file.
+
+-- (Removed: alter database postgres set app.super_admin_email = 'myne7x@gmail.com';)
+-- This command fails on Supabase hosted with: "permission denied to set parameter"
 
 -- ============================================================================
 -- 1. PROFILES TABLE
@@ -58,7 +62,7 @@ create index if not exists idx_profiles_department on public.profiles(department
 create or replace function public.handle_new_user()
 returns trigger as $$
 declare
-  protected_email text := coalesce(current_setting('app.super_admin_email', true), 'myne7x@gmail.com');
+  protected_email text := 'myne7x@gmail.com';
   assigned_role text;
 begin
   assigned_role := case
@@ -611,10 +615,11 @@ alter table public.system_settings enable row level security;
 -- ============================================================================
 
 -- Check if current user is the protected Super Admin
+-- NOTE: protected_email is hardcoded here (Supabase hosted doesn't allow ALTER DATABASE)
 create or replace function public.is_super_admin()
 returns boolean as $$
 declare
-  protected_email text := coalesce(current_setting('app.super_admin_email', true), 'myne7x@gmail.com');
+  protected_email text := 'myne7x@gmail.com';
 begin
   return exists (
     select 1 from auth.users
@@ -660,7 +665,7 @@ $$ language plpgsql security definer;
 create or replace function public.prevent_super_admin_modification()
 returns trigger as $$
 declare
-  protected_email text := coalesce(current_setting('app.super_admin_email', true), 'myne7x@gmail.com');
+  protected_email text := 'myne7x@gmail.com';
   target_email text;
   target_old_role text;
 begin
@@ -1095,8 +1100,10 @@ create policy "Owners delete documents" on storage.objects
 --    Set a strong password
 --    The handle_new_user trigger will auto-create a profile with role = 'super_admin'
 --
--- 2. (Optional) Update the protected email if different:
---    alter database postgres set app.super_admin_email = 'your-email@gmail.com';
+-- 2. (Optional) To change the protected email, edit the `protected_email` variable
+--    in these 3 functions: handle_new_user(), is_super_admin(), prevent_super_admin_modification()
+--    Then update VITE_SUPER_ADMIN_EMAIL in your .env file to match.
+--    NOTE: Supabase hosted does NOT allow `ALTER DATABASE postgres set app.super_admin_email = ...`
 --
 -- 3. Verify by querying:
 --    select * from public.profiles where email = 'myne7x@gmail.com';
